@@ -7,10 +7,9 @@
  */
 
 import { useEffect, useState } from "react";
-import { Image, ImageURISource } from "react-native";
-
-import { createCache } from "../utils";
+import { Image, ImageURISource, Platform } from "react-native";
 import { Dimensions, ImageSource } from "../@types";
+import { createCache } from "../utils";
 
 const CACHE_SIZE = 50;
 const imageDimensionsCache = createCache(CACHE_SIZE);
@@ -35,8 +34,8 @@ const useImageDimensions = (image: ImageSource): Dimensions | null => {
         return;
       }
 
-      // @ts-ignore
-      if (image.uri) {
+      const imageUri = image.uri;
+      if (imageUri) {
         const source = image as ImageURISource;
 
         const cacheKey = source.uri as string;
@@ -46,18 +45,30 @@ const useImageDimensions = (image: ImageSource): Dimensions | null => {
         if (imageDimensions) {
           resolve(imageDimensions);
         } else {
-          // @ts-ignore
-          Image.getSizeWithHeaders(
-            source.uri,
-            source.headers,
-            (width: number, height: number) => {
-              imageDimensionsCache.set(cacheKey, { width, height });
-              resolve({ width, height });
-            },
-            () => {
-              resolve({ width: 0, height: 0 });
-            }
-          );
+          if (Platform.OS === "web" || !source.headers) {
+            Image.getSize(
+              imageUri,
+              (width: number, height: number) => {
+                imageDimensionsCache.set(cacheKey, { width, height });
+                resolve({ width, height });
+              },
+              () => {
+                resolve({ width: 0, height: 0 });
+              }
+            );
+          } else {
+            Image.getSizeWithHeaders(
+              imageUri,
+              source.headers,
+              (width: number, height: number) => {
+                imageDimensionsCache.set(cacheKey, { width, height });
+                resolve({ width, height });
+              },
+              () => {
+                resolve({ width: 0, height: 0 });
+              }
+            );
+          }
         }
       } else {
         resolve({ width: 0, height: 0 });
