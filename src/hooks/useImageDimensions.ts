@@ -57,6 +57,7 @@ const useImageDimensions = (image: ImageSource): Dimensions | null => {
               }
             );
           } else {
+            // @ts-ignore
             Image.getSizeWithHeaders(
               imageUri,
               source.headers,
