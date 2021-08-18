@@ -10,21 +10,20 @@ import React, { ComponentType, useCallback, useEffect } from "react";
 import {
   Animated,
   Dimensions,
+  Modal,
+  ModalProps,
+  Platform,
   StyleSheet,
   View,
   VirtualizedList,
-  ModalProps,
-  Modal,
 } from "react-native";
-
-import ImageItem from "./components/ImageItem/ImageItem";
+import { ImageSource } from "./@types";
 import ImageDefaultHeader from "./components/ImageDefaultHeader";
+import ImageItem from "./components/ImageItem/ImageItem";
 import StatusBarManager from "./components/StatusBarManager";
-
 import useAnimatedComponents from "./hooks/useAnimatedComponents";
 import useImageIndexChange from "./hooks/useImageIndexChange";
 import useRequestClose from "./hooks/useRequestClose";
-import { ImageSource } from "./@types";
 
 type Props = {
   images: ImageSource[];
@@ -68,11 +67,8 @@ function ImageViewing({
   const imageList = React.createRef<VirtualizedList<ImageSource>>();
   const [opacity, onRequestCloseEnhanced] = useRequestClose(onRequestClose);
   const [currentImageIndex, onScroll] = useImageIndexChange(imageIndex, SCREEN);
-  const [
-    headerTransform,
-    footerTransform,
-    toggleBarsVisible,
-  ] = useAnimatedComponents();
+  const [headerTransform, footerTransform, toggleBarsVisible] =
+    useAnimatedComponents();
 
   useEffect(() => {
     if (onImageIndexChange) {
@@ -86,8 +82,17 @@ function ImageViewing({
       imageList?.current?.setNativeProps({ scrollEnabled: !isScaled });
       toggleBarsVisible(!isScaled);
     },
-    [imageList],
+    [imageList]
   );
+  useEffect(() => {
+    // Handle issue with https://github.com/necolas/react-native-web/issues/2030
+    if (Platform.OS === "web") {
+      imageList?.current?.scrollToIndex?.({
+        animated: false,
+        index: imageIndex,
+      });
+    }
+  }, [imageIndex, imageList?.current]);
 
   if (!visible) {
     return null;
@@ -106,15 +111,13 @@ function ImageViewing({
       <StatusBarManager presentationStyle={presentationStyle} />
       <View style={[styles.container, { opacity, backgroundColor }]}>
         <Animated.View style={[styles.header, { transform: headerTransform }]}>
-          {typeof HeaderComponent !== "undefined"
-            ? (
-              React.createElement(HeaderComponent, {
-                imageIndex: currentImageIndex,
-              })
-            )
-            : (
-              <ImageDefaultHeader onRequestClose={onRequestCloseEnhanced} />
-            )}
+          {typeof HeaderComponent !== "undefined" ? (
+            React.createElement(HeaderComponent, {
+              imageIndex: currentImageIndex,
+            })
+          ) : (
+            <ImageDefaultHeader onRequestClose={onRequestCloseEnhanced} />
+          )}
         </Animated.View>
         <VirtualizedList
           ref={imageList}
